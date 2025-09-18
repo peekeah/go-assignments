@@ -1,5 +1,7 @@
 package main
 
+import "errors"
+
 type Book struct {
 	Id              int
 	Title           string
@@ -49,4 +51,39 @@ func (l *Library) UpdateBook(book Book) Book {
 		}
 	}
 	return Book{}
+}
+
+func (l *Library) GetAvailableBooks() Library {
+	availableBooks := Library{}
+
+	for _, book := range *l {
+		if book.AvailableCopies > 0 {
+			availableBooks = append(availableBooks, book)
+		}
+	}
+
+	return availableBooks
+}
+
+func (l *Library) BorrowBook(bookId int) (Book, error) {
+	for id, book := range *l {
+		if book.Id == bookId && book.AvailableCopies == 0 {
+			return Book{}, errors.New("Book not available")
+		}
+		if book.Id == bookId {
+			(*l)[id].AvailableCopies--
+			return (*l)[id], nil
+		}
+	}
+	return Book{}, errors.New("Book not found")
+}
+
+func (l *Library) ReturnBook(bookId int) (Book, error) {
+	for id, book := range *l {
+		if book.Id == bookId {
+			(*l)[id].AvailableCopies++
+			return (*l)[id], nil
+		}
+	}
+	return Book{}, errors.New("Book not found")
 }
