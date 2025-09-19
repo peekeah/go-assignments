@@ -1,14 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
+	"os"
 )
 
 type Task struct {
-	Id          int
-	Description string
-	IsComplete  bool
+	Id          int    `json:"id"`
+	Description string `json:"description"`
+	IsComplete  bool   `json:"is_complete"`
 }
 
 type RawTask struct {
@@ -19,7 +22,59 @@ type RawTask struct {
 type Todo []*Task
 
 func InitilizeTodo() *Todo {
-	return &Todo{}
+	data, err := readJson()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	ptrArr := returnPtrArr(data)
+	return &ptrArr
+}
+
+func returnRawArr(todos Todo) []Task {
+	res := []Task{}
+
+	for _, val := range todos {
+		res = append(res, *val)
+	}
+	return res
+}
+
+func returnPtrArr(todos []Task) Todo {
+	res := Todo{}
+	for id, val := range todos {
+		res = append(res, &val)
+		res[id] = &val
+	}
+	return res
+}
+
+func saveJson(fileContent []Task) error {
+	// Save to JSON
+	data, err := json.Marshal(fileContent)
+	if err != nil {
+		return errors.New("error while storing data")
+	}
+
+	os.WriteFile("todo.json", data, 0644)
+	return nil
+}
+
+func readJson() ([]Task, error) {
+	data, err := os.ReadFile("todo.json")
+	if err != nil {
+		return nil, errors.New("error while storing data")
+	}
+
+	todos := []Task{}
+	json.Unmarshal(data, &todos)
+
+	return todos, nil
+}
+
+func (t *Todo) SyncFile() {
+	content := returnRawArr(*t)
+	saveJson(content)
 }
 
 func (t *Todo) AddBulkTasks(tasks []RawTask) {
@@ -28,13 +83,15 @@ func (t *Todo) AddBulkTasks(tasks []RawTask) {
 			t.AddTask(val)
 		}
 	}
+	t.SyncFile()
 }
 
-func (t *Todo) AddTask(task RawTask) Task {
+func (t *Todo) AddTask(task RawTask) *Task {
 	newId := rand.Intn(90000) + 10000
 	newTask := Task{newId, task.Description, task.IsComplete}
 	*t = append(*t, &newTask)
-	return newTask
+	t.SyncFile()
+	return (*t)[len(*t)-1]
 }
 
 func (t *Todo) GetTask(taskId int) (*Task, error) {
@@ -46,8 +103,9 @@ func (t *Todo) GetTask(taskId int) (*Task, error) {
 	return nil, errors.New("task not found")
 }
 
-func (t *Task) MarkComplete() {
-	t.IsComplete = true
+func (t *Todo) MarkComplete(task *Task) {
+	task.IsComplete = true
+	t.SyncFile()
 }
 
 func (t *Todo) DeleteTask(taskId int) error {
@@ -57,6 +115,7 @@ func (t *Todo) DeleteTask(taskId int) error {
 			return nil
 		}
 	}
+	t.SyncFile()
 	return errors.New("task not found")
 }
 
