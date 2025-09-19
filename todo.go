@@ -21,77 +21,73 @@ type RawTask struct {
 
 type Todo []*Task
 
-func InitilizeTodo() *Todo {
+func InitializeTodo() *Todo {
 	data, err := readJson()
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	ptrArr := returnPtrArr(data)
-	return &ptrArr
+	return &data
 }
 
-func returnRawArr(todos Todo) []Task {
-	res := []Task{}
-
-	for _, val := range todos {
-		res = append(res, *val)
-	}
-	return res
-}
-
-func returnPtrArr(todos []Task) Todo {
-	res := Todo{}
-	for id, val := range todos {
-		res = append(res, &val)
-		res[id] = &val
-	}
-	return res
-}
-
-func saveJson(fileContent []Task) error {
+func saveJson(fileContent Todo) error {
 	// Save to JSON
 	data, err := json.Marshal(fileContent)
 	if err != nil {
 		return errors.New("error while storing data")
 	}
 
-	os.WriteFile("todo.json", data, 0644)
-	return nil
+	return os.WriteFile("todo.json", data, 0644)
 }
 
-func readJson() ([]Task, error) {
+func readJson() (Todo, error) {
 	data, err := os.ReadFile("todo.json")
 	if err != nil {
-		return nil, errors.New("error while storing data")
+		if errors.Is(err, os.ErrNotExist) {
+			return Todo{}, nil
+		}
+		return nil, fmt.Errorf("error while reading data: %w", err)
 	}
 
-	todos := []Task{}
-	json.Unmarshal(data, &todos)
+	todos := Todo{}
+	if err := json.Unmarshal(data, &todos); err != nil {
+		return nil, fmt.Errorf("error while unmarshaling json: %w", err)
+	}
 
 	return todos, nil
 }
 
 func (t *Todo) SyncFile() {
-	content := returnRawArr(*t)
-	saveJson(content)
+	if err := saveJson(*t); err != nil {
+		fmt.Println("failed to sync file:", err)
+	}
 }
 
 func (t *Todo) AddBulkTasks(tasks []RawTask) {
 	if len(tasks) != 0 {
 		for _, val := range tasks {
-			t.AddTask(val)
+			t.AddTask(val, false)
 		}
 	}
 	t.SyncFile()
 }
 
-func (t *Todo) AddTask(task RawTask) *Task {
+func (t *Todo) AddTask(task RawTask, enableSync ...bool) *Task {
 	newId := rand.Intn(90000) + 10000
-	newTask := Task{newId, task.Description, task.IsComplete}
-	*t = append(*t, &newTask)
-	t.SyncFile()
-	return (*t)[len(*t)-1]
+
+	newTask := &Task{newId, task.Description, task.IsComplete}
+	*t = append(*t, newTask)
+
+	doSync := true
+	if len(enableSync) > 0 {
+		doSync = enableSync[0]
+	}
+
+	if doSync {
+		t.SyncFile()
+	}
+
+	return newTask
 }
 
 func (t *Todo) GetTask(taskId int) (*Task, error) {
@@ -112,10 +108,10 @@ func (t *Todo) DeleteTask(taskId int) error {
 	for id, val := range *t {
 		if val.Id == taskId {
 			*t = append((*t)[:id], (*t)[id+1:]...)
+			t.SyncFile()
 			return nil
 		}
 	}
-	t.SyncFile()
 	return errors.New("task not found")
 }
 

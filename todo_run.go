@@ -11,7 +11,7 @@ func RunTodos() {
 		{Description: "Pay electricity bill", IsComplete: true},
 	}
 
-	todos := InitilizeTodo()
+	todos := InitializeTodo()
 	todos.AddBulkTasks(initialTasks)           // Bulk upload
 	todos.AddTask(RawTask{"Buy Phone", false}) // Add task
 
@@ -30,7 +30,7 @@ func RunTodos() {
 	// Test file Sync
 	newTask := todos.AddTask(RawTask{"Hair Cut", false})
 	todos.MarkComplete(newTask)
-	tt, err := todos.GetTask(task.Id)
+	tt, err := todos.GetTask(newTask.Id)
 	if err != nil {
 		fmt.Println(err)
 		return
