@@ -1,0 +1,1 @@
+[{"Id":977872,"Sender":{"Id":307354,"Name":"Alice"},"Receiver":{"Id":541852,"Name":"Bob"},"Content":"How are you?","Timestamp":"2025-09-20T00:06:09.600091024+05:30"},{"Id":278236,"Sender":{"Id":541852,"Name":"Bob"},"Receiver":{"Id":307354,"Name":"Alice"},"Content":"I’m good, thanks!","Timestamp":"2025-09-20T00:06:09.600170145+05:30"}]
